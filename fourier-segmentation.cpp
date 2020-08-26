@@ -127,6 +127,12 @@ int main(int argc, char *argv[])
         for (int j = 1; j < WINDOW_DIMENSION * WINDOW_DIMENSION; ++j)
             pcaInput.at<float>(i, j - 1) = transformed[i * WINDOW_DIMENSION * WINDOW_DIMENSION + j].real();
 
+    for (int i = 0; i < numValues; ++i)
+    {
+        auto r = pcaInput.row(i);
+        cv::normalize(r, r);
+    }
+
     delete[] transformed;
     transformed = nullptr;
 
