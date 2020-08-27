@@ -21,9 +21,24 @@
     <ClCompile Include="tswdft2d.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="tsne.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="splittree.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="tswdft2d.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="tsne.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vptree.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="splittree.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
