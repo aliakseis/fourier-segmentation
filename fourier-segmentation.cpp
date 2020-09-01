@@ -13,6 +13,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <numeric>
 
 // https://gist.github.com/voidqk/fc5a58b7d9fc020ecf7f2f5fc907dfa5
 inline float fastAtan2_(float y, float x)
@@ -165,6 +166,197 @@ double* tSNE(double* X, int N, int D, //double* Y,
     //}
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
+void generatePolyMembers(
+    const std::vector<double>& input,
+    int power, int idx, double product, std::vector<double>& result)
+{
+    if (power == 0)
+    {
+        if (idx != -1)
+            result.push_back(product);
+        return;
+    }
+
+    if (idx == -1)
+    {
+        generatePolyMembers(input, power - 1, idx, product, result);
+        ++idx;
+    }
+
+    for (; idx < input.size(); ++idx)
+    {
+        generatePolyMembers(input, power - 1, idx, product * input[idx], result);
+    }
+}
+
+std::vector<double> generatePolyMembers(const std::vector<double>& input, int power)
+{
+    std::vector<double> result;
+    generatePolyMembers(input, power, -1, 1., result);
+    return result;
+}
+
+//int sign(double v)
+//{
+//    return (v > 0) ? 1 : ((v < 0) ? -1 : 0);
+//}
+
+auto linearRegression(const cv::Mat& src, const std::vector<double>& prices)
+{
+    enum { MAX_POLY_POWER = 3 };
+
+    //int numFeatures, numRows;
+    //std::cin >> numFeatures >> numRows;
+
+    const int numRows = src.rows;
+    const int numFeatures = src.cols;
+
+    std::vector<std::vector<double>> data;
+    //std::vector<double> prices;
+    for (int i = 0; i < numRows; ++i)
+    {
+        std::vector<double> row(numFeatures);
+        for (int j = 0; j < numFeatures; ++j)
+        {
+            //double v;
+            //std::cin >> v;
+            //row.push_back(v);
+            row[j] = src.at<double>(i, j);
+        }
+        data.push_back(generatePolyMembers(row, MAX_POLY_POWER));
+
+        //double v;
+        //std::cin >> v;
+        //prices.push_back(v);
+    }
+
+    const auto num_params = data[0].size();
+
+    std::vector<double> avg(num_params, 0.);
+    std::vector<double> dev(num_params, 0.);
+
+    for (const auto& l : data)
+    {
+        for (int i = 0; i < num_params; ++i)
+        {
+            avg[i] += l[i];
+            dev[i] += l[i] * l[i];
+        }
+    }
+
+    for (int i = 0; i < num_params; ++i)
+    {
+        avg[i] /= numRows;
+        dev[i] = sqrt(dev[i] / numRows - avg[i] * avg[i]);
+    }
+
+    for (auto& l : data)
+    {
+        for (int i = 0; i < num_params; ++i)
+        {
+            l[i] = (l[i] - avg[i]) / dev[i];
+        }
+    }
+
+    for (auto& l : data)
+    {
+        l.insert(l.begin(), 1.);
+    }
+
+    std::vector<double> w(num_params + 1, -1.);
+
+    enum { N_ITER = 100000 };
+    
+    //const double lambda = 1.;
+    const double lambda = .5;
+    const double lr = 0.1;
+
+    double prev_sq_dist = DBL_MAX;
+
+    for (int i = 0; i < N_ITER; ++i)
+    {
+        double sq_dist = 0.;
+
+        std::vector<double> delta_l(num_params + 1, 0.);
+        for (int i = 0; i < numRows; ++i)
+        {
+            const auto& l = data[i];
+            const auto delta = std::inner_product(l.begin(), l.end(), w.begin(), 0.) - prices[i];
+            sq_dist += delta * delta;
+            for (int j = 0; j < delta_l.size(); ++j)
+                delta_l[j] += l[j] * delta;
+        }
+
+        if (sq_dist >= prev_sq_dist)
+            break;
+        prev_sq_dist = sq_dist;
+
+        for (int i = 0; i < delta_l.size(); ++i)
+        {
+            const auto delta = delta_l[i] / numRows + lambda * sign(w[i]);
+            w[i] -= lr * delta;
+        }
+    }
+
+    //int num_tests;
+    //std::cin >> num_tests;
+
+    std::vector<double> results;
+
+    for (int i = 0; i < numRows; ++i)
+    {
+        std::vector<double> row(numFeatures);
+        for (int j = 0; j < numFeatures; ++j)
+        {
+            //double v;
+            //std::cin >> v;
+            //row.push_back(v);
+            row[j] = src.at<double>(i, j);
+        }
+        //data.push_back(generatePolyMembers(row, MAX_POLY_POWER));
+
+        auto l = generatePolyMembers(row, MAX_POLY_POWER);
+        for (int i = 0; i < num_params; ++i)
+        {
+            l[i] = (l[i] - avg[i]) / dev[i];
+        }
+        l.insert(l.begin(), 1.);
+
+        const auto result = std::inner_product(l.begin(), l.end(), w.begin(), 0.);
+
+        results.push_back(result);
+
+        //double v;
+        //std::cin >> v;
+        //prices.push_back(v);
+    }
+
+    return results;
+
+    //for (int i = 0; i < num_tests; ++i)
+    //{
+    //    std::vector<double> row;
+    //    for (int j = 0; j < numFeatures; ++j)
+    //    {
+    //        double v;
+    //        std::cin >> v;
+    //        row.push_back(v);
+    //    }
+
+    //    auto l = generatePolyMembers(row, MAX_POLY_POWER);
+    //    for (int i = 0; i < num_params; ++i)
+    //    {
+    //        l[i] = (l[i] - avg[i]) / dev[i];
+    //    }
+    //    l.insert(l.begin(), 1.);
+
+    //    const auto result = std::inner_product(l.begin(), l.end(), w.begin(), 0.);
+    //    std::cout << result << '\n';
+    //}
+
+}
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -173,7 +365,7 @@ int main(int argc, char *argv[])
     /*Read Image*/
     cv::Mat img = cv::imread(argv[1], cv::IMREAD_GRAYSCALE);
 
-    enum { IMG_DIMENSION = 512 };
+    enum { IMG_DIMENSION = 1024 };
     resize(img, img, cv::Size(IMG_DIMENSION, IMG_DIMENSION), 0, 0, cv::INTER_LANCZOS4);
 
     enum { WINDOW_DIMENSION = 8 };
@@ -182,11 +374,34 @@ int main(int argc, char *argv[])
 
     const auto numValues = (img.rows - WINDOW_DIMENSION + 1) * (img.cols - WINDOW_DIMENSION + 1);
 
+/*
     cv::Mat pcaInput(numValues, WINDOW_DIMENSION * WINDOW_DIMENSION - 1, CV_64FC1);
 
     for (int i = 0; i < numValues; ++i)
         for (int j = 1; j < WINDOW_DIMENSION * WINDOW_DIMENSION; ++j)
-            pcaInput.at<double>(i, j - 1) = transformed[i * WINDOW_DIMENSION * WINDOW_DIMENSION + j].real();
+            //pcaInput.at<double>(i, j - 1) = transformed[i * WINDOW_DIMENSION * WINDOW_DIMENSION + j].real();
+            //pcaInput.at<double>(i, j - 1) = std::abs(transformed[i * WINDOW_DIMENSION * WINDOW_DIMENSION + j]);
+            pcaInput.at<double>(i, j - 1) = std::arg(transformed[i * WINDOW_DIMENSION * WINDOW_DIMENSION + j]);
+*/
+
+    cv::Mat pcaInput(numValues, WINDOW_DIMENSION * WINDOW_DIMENSION * 2 - 1, CV_64FC1);
+
+    for (int i = 0; i < numValues; ++i)
+    {
+        pcaInput.at<double>(i, 0) = transformed[i * WINDOW_DIMENSION * WINDOW_DIMENSION].real();
+
+        for (int j = 1; j < WINDOW_DIMENSION * WINDOW_DIMENSION; ++j)
+        {
+            //pcaInput.at<double>(i, j - 1) = transformed[i * WINDOW_DIMENSION * WINDOW_DIMENSION + j].real();
+            //pcaInput.at<double>(i, j - 1) = std::abs(transformed[i * WINDOW_DIMENSION * WINDOW_DIMENSION + j]);
+            //pcaInput.at<double>(i, j - 1) = std::arg(transformed[i * WINDOW_DIMENSION * WINDOW_DIMENSION + j]);
+
+            //pcaInput.at<double>(i, j * 2 - 1) = transformed[i * WINDOW_DIMENSION * WINDOW_DIMENSION + j].real();
+            //pcaInput.at<double>(i, j * 2) = transformed[i * WINDOW_DIMENSION * WINDOW_DIMENSION + j].imag();
+            pcaInput.at<double>(i, j * 2 - 1) = std::abs(transformed[i * WINDOW_DIMENSION * WINDOW_DIMENSION + j]);
+            pcaInput.at<double>(i, j * 2) = std::arg(transformed[i * WINDOW_DIMENSION * WINDOW_DIMENSION + j]);
+        }
+    }
 
     for (int i = 0; i < numValues; ++i)
     {
@@ -250,11 +465,29 @@ int main(int argc, char *argv[])
     cv::imshow("visualization", visualization);
     //*/
 
+
+
+    std::vector<double> prices;
+    for (int y = 0; y < visualizationRows; ++y)
+        for (int x = 0; x < visualizationCols; ++x)
+        {
+            prices.push_back(img.at<uchar>(y + WINDOW_DIMENSION / 2, x + WINDOW_DIMENSION / 2));
+        }
+
+    auto regressed = linearRegression(reduced, prices);
+    cv::Mat rawRegressed(cv::Size(visualizationCols, visualizationRows), CV_64FC1, regressed.data());
+
+    cv::Mat imgRegressed;
+    rawRegressed.convertTo(imgRegressed, CV_8U);
+
+    cv::imshow("regressed", imgRegressed);
+
+
     cv::waitKey(0);
 
     if (argc > 2)
     {
-        cv::imwrite(argv[2], visualization);
+        cv::imwrite(argv[2], imgRegressed);
     }
 
     return 0;
