@@ -207,7 +207,7 @@ std::complex<double> * tswdft2d(const unsigned char *x, int n0, int n1, int N0, 
     /* Initialize level 0 of the tree data-structure to the data  */
     for (int row = 0; row < N0; row++) {
         for (int col = 0; col < N1; col++) {
-            level_prev[TREE_2D(row, col)] = x[X_LOOKUP(row, col)];
+            level_prev[TREE_2D(row, col)] = double(x[X_LOOKUP(row, col)]) + 1.;
         }
     }
 
