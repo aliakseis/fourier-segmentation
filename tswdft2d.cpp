@@ -1,6 +1,8 @@
 /* This file implements the 2D Radix-2 Tree Sliding Window Discrete Fourier Transform algorithm 
 described in the manuscript: "Algorithm xxx: The 2D Tree SWDFT Algorithm" */
 
+#if 0
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -272,3 +274,5 @@ std::complex<double> * tswdft2d(const unsigned char *x, int n0, int n1, int N0, 
     //return a;
     return level_cur;
 }
+
+#endif

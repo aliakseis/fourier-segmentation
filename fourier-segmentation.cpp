@@ -21,6 +21,8 @@
 #include <numeric>
 #include <random>
 
+static const auto M_PI = 3.14159265358979323846;
+
 // https://gist.github.com/voidqk/fc5a58b7d9fc020ecf7f2f5fc907dfa5
 inline float fastAtan2_(float y, float x)
 {
@@ -507,7 +509,7 @@ int main(int argc, char *argv[])
 
     enum { WINDOW_DIMENSION = 16 };
     //volatile 
-    auto transformed = tswdft2d(img.data, WINDOW_DIMENSION, WINDOW_DIMENSION, img.rows, img.cols);
+    auto transformed = tswdft2d<double>(img.data, WINDOW_DIMENSION, WINDOW_DIMENSION, img.rows, img.cols);
 
     const auto numValues = (img.rows - WINDOW_DIMENSION + 1) * (img.cols - WINDOW_DIMENSION + 1);
 
@@ -571,8 +573,11 @@ int main(int argc, char *argv[])
 
     //cv::hconcat(pcaInput, sizes, pcaInput);
 
-    delete[] transformed;
-    transformed = nullptr;
+    //delete[] transformed;
+    //transformed = nullptr;
+    
+    decltype(transformed)().swap(transformed);
+    //transformed.clear();
 
     /*
     volatile auto tsne = tSNE((double*)pcaInput.data, numValues, WINDOW_DIMENSION * WINDOW_DIMENSION - 1);
